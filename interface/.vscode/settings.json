@@ -1,0 +1,12 @@
+{
+    "cmake.cmakePath": "cube-cmake",
+    "cmake.configureArgs": [
+        "-DCMAKE_COMMAND=cube-cmake"
+    ],
+    "stm32cube-ide-clangd.path": "cube",
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\build\\compile_commands.json",
+    "clangd.arguments": [
+        "--compile-commands-dir=./build/",
+        // "-header-insertion=never"
+    ],
+}

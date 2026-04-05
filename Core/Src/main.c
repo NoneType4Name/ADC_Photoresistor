@@ -18,6 +18,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
+#include <stdint.h>
+#include <stdlib.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -75,8 +79,7 @@ int main( void )
 
     /* MCU Configuration--------------------------------------------------------*/
 
-    /* Reset of all peripherals, Initializes the Flash interface and the Systick.
-     */
+    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     HAL_Init();
 
     /* USER CODE BEGIN Init */
@@ -93,6 +96,7 @@ int main( void )
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_ADC1_Init();
+    MX_USB_DEVICE_Init();
     /* USER CODE BEGIN 2 */
     HAL_ADCEx_Calibration_Start( &hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED );
 
@@ -105,9 +109,14 @@ int main( void )
     {
         HAL_ADC_Start( &hadc1 );
         HAL_ADC_PollForConversion( &hadc1, 100 );
-        adc = HAL_ADC_GetValue( &hadc1 );
+        adc = ( uint16_t ) ( HAL_ADC_GetValue( &hadc1 ) );
         HAL_ADC_Stop( &hadc1 );
-        HAL_Delay( 1000 );
+        // uint8_t high   = ( adc >> 8 ) & 0xFF;
+        // uint8_t low    = adc & 0xFF;
+        // uint8_t d[ 2 ] = { high, low };
+        char d[ 6 ] = { 0, 0, 0, 0, 0, '\n' };
+        itoa( adc, &d, 10 );
+        CDC_Transmit_FS( &d, 6 );
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
@@ -143,9 +152,10 @@ void SystemClock_Config( void )
     /** Initializes the RCC Oscillators according to the specified parameters
      * in the RCC_OscInitTypeDef structure.
      */
-    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+    RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI48 | RCC_OSCILLATORTYPE_HSI;
     RCC_OscInitStruct.HSIState            = RCC_HSI_DIV1;
     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+    RCC_OscInitStruct.HSI48State          = RCC_HSI48_ON;
     RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_NONE;
     if ( HAL_RCC_OscConfig( &RCC_OscInitStruct ) != HAL_OK )
     {
@@ -154,9 +164,7 @@ void SystemClock_Config( void )
 
     /** Initializes the CPU, AHB and APB buses clocks
      */
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
-                                  RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 |
-                                  RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
+    RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
     RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;
