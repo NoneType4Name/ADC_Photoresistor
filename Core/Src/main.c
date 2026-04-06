@@ -22,6 +22,7 @@
 #include "usbd_cdc_if.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -45,7 +46,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-
+uint32_t RxBufferFSLen = 0;
+uint8_t RxBufferFS[ 3 ];
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -61,6 +63,11 @@ static void MX_ADC1_Init( void );
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
+{
+    memcpy( buf, RxBufferFS, len );
+    RxBufferFSLen = len;
+}
 
 /* USER CODE END 0 */
 
@@ -104,19 +111,26 @@ int main( void )
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    uint16_t adc;
+    uint16_t adcData;
     while ( 1 )
     {
-        HAL_ADC_Start( &hadc1 );
-        HAL_ADC_PollForConversion( &hadc1, 100 );
-        adc = ( uint16_t ) ( HAL_ADC_GetValue( &hadc1 ) );
-        HAL_ADC_Stop( &hadc1 );
-        // uint8_t high   = ( adc >> 8 ) & 0xFF;
-        // uint8_t low    = adc & 0xFF;
-        // uint8_t d[ 2 ] = { high, low };
-        char d[ 6 ] = { 0, 0, 0, 0, 0, '\n' };
-        itoa( adc, &d, 10 );
-        CDC_Transmit_FS( &d, 6 );
+        while ( !RxBufferFSLen );
+
+        if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
+        {
+            HAL_ADC_Start( &hadc1 );
+            HAL_ADC_PollForConversion( &hadc1, 100 );
+            adcData = ( uint16_t ) ( HAL_ADC_GetValue( &hadc1 ) );
+            HAL_ADC_Stop( &hadc1 );
+            uint8_t high   = ( adcData >> 8 ) & 0xFF;
+            uint8_t low    = adcData & 0xFF;
+            uint8_t d[ 3 ] = { high, low, '\n' };
+            // char d[ 6 ] = { 0, 0, 0, 0, 0, '\n' };
+            // itoa( adc, &d, 10 );
+            CDC_Transmit_FS( d, 3 );
+        }
+        memset( &RxBufferFS, 0, 3 );
+        RxBufferFSLen = 0;
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */

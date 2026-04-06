@@ -58,6 +58,10 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="styleSheet">
+             <string notr="true">QLabel[colorState=&quot;red&quot;] { color: #0f0; }
+QLabel[colorState=&quot;green&quot;] { color: #f00; }</string>
+            </property>
             <property name="text">
              <string>TextLabel</string>
             </property>
@@ -77,7 +81,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>TextLabel</string>
+               <string>4000</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignCenter</set>
