@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "stm32h750xx.h"
+#include "stm32h7xx_hal_gpio.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 #include <stdint.h>
@@ -111,6 +113,8 @@ int main( void )
 
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
+
+    uint16_t trashold = 4000;
     uint16_t adcData;
     while ( 1 )
     {
@@ -124,12 +128,15 @@ int main( void )
             HAL_ADC_Stop( &hadc1 );
             uint8_t high   = ( adcData >> 8 ) & 0xFF;
             uint8_t low    = adcData & 0xFF;
-            uint8_t d[ 3 ] = { high, low, '\n' };
-            // char d[ 6 ] = { 0, 0, 0, 0, 0, '\n' };
-            // itoa( adc, &d, 10 );
-            CDC_Transmit_FS( d, 3 );
+            uint8_t d[ 2 ] = { high, low };
+            CDC_Transmit_FS( d, 2 );
         }
-        memset( &RxBufferFS, 0, 3 );
+        else
+        {
+            trashold = ( RxBufferFS[ 0 ] << 8 ) | RxBufferFS[ 1 ];
+        }
+        HAL_GPIO_WritePin( GPIOA, GPIO_PIN_7, ( adcData < trashold ? GPIO_PIN_SET : GPIO_PIN_RESET ) );
+        memset( &RxBufferFS, 0, 2 );
         RxBufferFSLen = 0;
         /* USER CODE END WHILE */
 

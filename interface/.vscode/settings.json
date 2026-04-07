@@ -9,4 +9,11 @@
         "--compile-commands-dir=./build/",
         // "-header-insertion=never"
     ],
+    "python-envs.pythonProjects": [
+        {
+            "path": ".qtcreator",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ],
 }

@@ -15,10 +15,10 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         main.cpp
-        CDC.cxx
-        CDC.hxx
+        CDCusb.cxx
+        CDCusb.hxx
         mainwindow.cxx
-        mainwindow.h
+        mainwindow.hxx
         mainwindow.ui
 )
 
