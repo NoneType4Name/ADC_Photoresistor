@@ -39,7 +39,7 @@ void CDCusb::setNewLevel( uint16_t l )
     uint8_t d[ 2 ] = { high, low };
     if ( !write( d, 2 ) )
     {
-        qDebug() << "FAILED TO WRITE CDC (ZERO WRITTEN BYTES\n";
+        qDebug() << "FAILED TO WRITE CDC (ZERO WRITTEN BYTES)\n";
         return;
     }
 }
@@ -47,14 +47,14 @@ void CDCusb::setNewLevel( uint16_t l )
 uint32_t CDCusb::write( uint8_t *buf, uint32_t len )
 {
     DWORD operatedBytes;
-    assert( WriteFile( hCom, buf, len, &operatedBytes, 0 ) );
+    assert( WriteFile( hCom, &buf, len, &operatedBytes, 0 ) );
     return operatedBytes;
 }
 
 uint32_t CDCusb::read( uint8_t *buf, uint32_t len )
 {
     DWORD operatedBytes;
-    assert( ReadFile( hCom, buf, len, &operatedBytes, NULL ) );
+    assert( ReadFile( hCom, &buf, len, &operatedBytes, NULL ) );
     return operatedBytes;
 }
 

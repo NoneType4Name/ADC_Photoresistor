@@ -6,51 +6,53 @@
 #include "CDCusb.hxx"
 
 MainWindow::MainWindow( CDCusb *_cdc, QWidget *parent ) :
-    QMainWindow( parent ), _cdc( _cdc ), ui( new Ui::MainWindow )
+    QMainWindow( parent ), _cdc( _cdc ), ui( new Ui::MainWindow ), timer( new QTimer( this ) )
 {
     ui->setupUi( this );
-    th = std::thread( [ & ]()
-                      { threadUpd(); } );
+    connect( timer, &QTimer::timeout, this, &MainWindow::timerCallback );
+    timer->start( 100 );
+    // th = std::thread( [ & ]()
+    //                   { timerCallback(); } );
 }
 
-void MainWindow::threadUpd()
+void MainWindow::timerCallback()
 {
-    bool pOn { 0 };
-    bool prevPOn { pOn };
-    uint8_t prevB[ 2 ];
-    while ( r )
+    // bool prevPOn { pOn };
+    // uint8_t prevB[ 2 ];
+    // while ( r )
     {
-        uint8_t data[ 2 ] { 0, 0 };
+        uint8_t data[ 2 ] { 39, 16 };
         if ( _cdcNewLevel )
         {
             _cdc->setNewLevel( ui->lineEdit->text().toUInt() );
             _cdcNewLevel = 0;
+            return;
         }
         else if ( !_cdc->write( data, 2 ) )
         {
             qDebug() << "FAILED TO WRITE CDC (ZERO WRITTEN BYTES)\n";
-            continue;
+            return;
             // r = 0;
             // return;
         }
         if ( !_cdc->read( data, 2 ) )
         {
             qDebug() << "ZERO READED BYTES FROM CDC\n";
-            continue;
+            return;
             // r = 0;
             // return;
         }
         uint16_t res { static_cast<uint16_t>( ( data[ 0 ] << 8 ) | data[ 1 ] ) };
-        prevPOn = pOn;
-        if ( res >= ui->status_2->text().toUInt() && !pOn )
+        bool pOn;
+        if ( res > ui->status_2->text().toUInt() )
         {
-            pOn = !pOn;
+            pOn = 1;
         }
-        else if ( res < ui->status_2->text().toUInt() && pOn )
+        else if ( res < ui->status_2->text().toUInt() )
         {
-            pOn = !pOn;
+            pOn = 0;
         }
-        if ( prevPOn != pOn )
+        if ( res != ui->status_2->text().toUInt() )
         {
             QMetaObject::invokeMethod( ui->status, [ = ]()
                                        {
@@ -63,11 +65,11 @@ void MainWindow::threadUpd()
 
 MainWindow::~MainWindow()
 {
-    r = 0;
-    while ( !th.joinable() )
-    {
-    }
-    th.join();
+    // r = 0;
+    // while ( !th.joinable() )
+    // {
+    // }
+    // th.join();
     delete ui;
 }
 

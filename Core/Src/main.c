@@ -15,12 +15,6 @@
  *
  ******************************************************************************
  */
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include "stm32h750xx.h"
-#include "stm32h7xx_hal_gpio.h"
-#include "usbd_cdc_if.h"
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -28,6 +22,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include "stm32h750xx.h"
+#include "stm32h7xx_hal_gpio.h"
+#include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
 
@@ -51,7 +51,7 @@ ADC_HandleTypeDef hadc1;
 
 /* USER CODE BEGIN PV */
 uint32_t RxBufferFSLen = 0;
-uint8_t RxBufferFS[ 3 ];
+uint8_t RxBufferFS[ 2 ];
 
 /* USER CODE END PV */
 
@@ -68,7 +68,7 @@ static void MX_ADC1_Init( void );
 /* USER CODE BEGIN 0 */
 void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
 {
-    memcpy( buf, RxBufferFS, len );
+    memcpy( RxBufferFS, buf, len * sizeof( uint8_t ) ); // no copy #todo
     RxBufferFSLen = len;
 }
 
