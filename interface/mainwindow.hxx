@@ -26,6 +26,7 @@ class MainWindow : public QMainWindow
     void threadUpd();
     bool r { 1 };
     std::thread th;
+    bool _cdcNewLevel { 0 };
 
   private slots:
     void on_pushButton_clicked();

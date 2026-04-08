@@ -17,48 +17,47 @@ void MainWindow::threadUpd()
 {
     bool pOn { 0 };
     bool prevPOn { pOn };
-    uint8_t prevB[ 3 ];
+    uint8_t prevB[ 2 ];
     while ( r )
     {
-        uint8_t b[ 3 ] { 0, 0, 0 };
-        DWORD operatedBytes;
-        uint8_t com[ 2 ] { 0, 0 };
-        if ( !WriteFile( _cdc->hCom, &com, 2, &operatedBytes, 0 ) )
+        uint8_t data[ 2 ] { 0, 0 };
+        if ( _cdcNewLevel )
         {
-            qDebug() << "FAILED TO WRITE CDC\n";
-            r = 0;
-            return;
+            _cdc->setNewLevel( ui->lineEdit->text().toUInt() );
+            _cdcNewLevel = 0;
         }
-        operatedBytes = 0;
-        if ( !ReadFile( _cdc->hCom, &b, 2, &operatedBytes, NULL ) )
+        else if ( !_cdc->write( data, 2 ) )
         {
-            qDebug() << "FAILED TO READ CDC\n";
-            r = 0;
-            return;
-        }
-        if ( !operatedBytes )
-        {
-            qDebug() << "BAD PACKET\n";
+            qDebug() << "FAILED TO WRITE CDC (ZERO WRITTEN BYTES)\n";
             continue;
+            // r = 0;
+            // return;
         }
-        uint16_t res { static_cast<uint16_t>( ( b[ 0 ] << 8 ) | b[ 1 ] ) };
-        // QMetaObject::invokeMethod( ui->lineEdit, "setText", Qt::QueuedConnection, Q_ARG( QString, QString::number( res ) ) );
-        QMetaObject::invokeMethod( ui->status, "setText", Qt::QueuedConnection, Q_ARG( QString, res > ui->status_2->text().toInt() ? "ВКЛ" : "ВЫКЛ" ) );
-        auto d  = ui->status_2->text().toInt();
+        if ( !_cdc->read( data, 2 ) )
+        {
+            qDebug() << "ZERO READED BYTES FROM CDC\n";
+            continue;
+            // r = 0;
+            // return;
+        }
+        uint16_t res { static_cast<uint16_t>( ( data[ 0 ] << 8 ) | data[ 1 ] ) };
         prevPOn = pOn;
-        if ( res >= ui->status_2->text().toInt() && !pOn )
+        if ( res >= ui->status_2->text().toUInt() && !pOn )
         {
             pOn = !pOn;
         }
-        else if ( res < ui->status_2->text().toInt() && pOn )
+        else if ( res < ui->status_2->text().toUInt() && pOn )
         {
             pOn = !pOn;
         }
         if ( prevPOn != pOn )
+        {
             QMetaObject::invokeMethod( ui->status, [ = ]()
                                        {
-        ui->status->setProperty("colorState", pOn ? "green":"red");
-        ui->status->style()->polish(ui->status); }, Qt::QueuedConnection );
+                ui->status->setProperty("colorState", pOn ? "green":"red");
+                ui->status->style()->polish(ui->status); }, Qt::QueuedConnection );
+            QMetaObject::invokeMethod( ui->status, "setText", Qt::QueuedConnection, Q_ARG( QString, res > ui->status_2->text().toInt() ? "ВКЛ" : "ВЫКЛ" ) );
+        }
     }
 }
 
@@ -74,5 +73,5 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-    _cdc->setNewLevel( ui->lineEdit->text().toInt() );
+    _cdcNewLevel = 1;
 }

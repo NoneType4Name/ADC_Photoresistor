@@ -15,16 +15,16 @@
  *
  ******************************************************************************
  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
-#include "main.h"
-#include "stm32h750xx.h"
-#include "stm32h7xx_hal_gpio.h"
-#include "usb_device.h"
-#include "usbd_cdc_if.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "stm32h750xx.h"
+#include "stm32h7xx_hal_gpio.h"
+#include "usbd_cdc_if.h"
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,9 +48,10 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+
+/* USER CODE BEGIN PV */
 uint32_t RxBufferFSLen = 0;
 uint8_t RxBufferFS[ 3 ];
-/* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
