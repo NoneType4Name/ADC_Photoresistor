@@ -21,7 +21,7 @@ void MainWindow::timerCallback()
     // uint8_t prevB[ 2 ];
     // while ( r )
     {
-        uint8_t data[ 2 ] { 39, 16 };
+        uint8_t data[ 2 ] { 0, 0 };
         if ( _cdcNewLevel )
         {
             _cdc->setNewLevel( ui->lineEdit->text().toUInt() );

@@ -5,7 +5,7 @@
 
 CDCusb::CDCusb()
 {
-    hCom = CreateFileA( "\\\\.\\COM3",
+    hCom = CreateFileA( "\\\\.\\COM6",
                         GENERIC_READ | GENERIC_WRITE,
                         0, NULL, OPEN_EXISTING, 0, NULL );
 
@@ -47,14 +47,14 @@ void CDCusb::setNewLevel( uint16_t l )
 uint32_t CDCusb::write( uint8_t *buf, uint32_t len )
 {
     DWORD operatedBytes;
-    assert( WriteFile( hCom, &buf, len, &operatedBytes, 0 ) );
+    assert( WriteFile( hCom, buf, len, &operatedBytes, 0 ) );
     return operatedBytes;
 }
 
 uint32_t CDCusb::read( uint8_t *buf, uint32_t len )
 {
     DWORD operatedBytes;
-    assert( ReadFile( hCom, &buf, len, &operatedBytes, NULL ) );
+    assert( ReadFile( hCom, buf, len, &operatedBytes, NULL ) );
     return operatedBytes;
 }
 

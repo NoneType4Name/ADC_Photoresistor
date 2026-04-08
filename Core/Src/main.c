@@ -68,7 +68,7 @@ static void MX_ADC1_Init( void );
 /* USER CODE BEGIN 0 */
 void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
 {
-    memcpy( RxBufferFS, buf, len * sizeof( uint8_t ) ); // no copy #todo
+    memcpy( RxBufferFS, buf, len * sizeof( uint8_t ) );
     RxBufferFSLen = len;
 }
 
@@ -117,6 +117,7 @@ int main( void )
 
     uint16_t trashold = 4000;
     uint16_t adcData;
+
     while ( 1 )
     {
         while ( !RxBufferFSLen );
@@ -136,8 +137,8 @@ int main( void )
         {
             trashold = ( RxBufferFS[ 0 ] << 8 ) | RxBufferFS[ 1 ];
         }
-        HAL_GPIO_WritePin( GPIOA, GPIO_PIN_7, ( adcData < trashold ? GPIO_PIN_SET : GPIO_PIN_RESET ) );
-        memset( &RxBufferFS, 0, 2 );
+        HAL_GPIO_WritePin( GPIOA, GPIO_PIN_7, ( adcData < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
+        memset( RxBufferFS, 0, 2 );
         RxBufferFSLen = 0;
         /* USER CODE END WHILE */
 
@@ -275,12 +276,23 @@ static void MX_ADC1_Init( void )
  */
 static void MX_GPIO_Init( void )
 {
+    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
     /* USER CODE BEGIN MX_GPIO_Init_1 */
 
     /* USER CODE END MX_GPIO_Init_1 */
 
     /* GPIO Ports Clock Enable */
     __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET );
+
+    /*Configure GPIO pin : LED_Pin */
+    GPIO_InitStruct.Pin   = LED_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init( LED_GPIO_Port, &GPIO_InitStruct );
 
     /* USER CODE BEGIN MX_GPIO_Init_2 */
 
