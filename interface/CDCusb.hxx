@@ -7,7 +7,7 @@
 class CDCusb
 {
   public:
-    CDCusb();
+    CDCusb( uint64_t comPortNum );
     void setNewLevel( uint16_t l );
     uint32_t write( uint8_t *buf, uint32_t len );
     uint32_t read( uint8_t *buf, uint32_t len );

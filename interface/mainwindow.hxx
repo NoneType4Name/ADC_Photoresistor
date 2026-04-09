@@ -17,7 +17,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
   public:
-    MainWindow( CDCusb *_cdc, QWidget *parent = nullptr );
+    MainWindow( QWidget *parent = nullptr );
     ~MainWindow();
     Ui::MainWindow *ui;
     CDCusb *_cdc;

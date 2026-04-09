@@ -3,9 +3,9 @@
 #include <qlogging.h>
 #include <QDebug>
 
-CDCusb::CDCusb()
+CDCusb::CDCusb( uint64_t comPortNum )
 {
-    hCom = CreateFileA( "\\\\.\\COM6",
+    hCom = CreateFileA( "\\\\.\\COM" + comPortNum !!,
                         GENERIC_READ | GENERIC_WRITE,
                         0, NULL, OPEN_EXISTING, 0, NULL );
 
