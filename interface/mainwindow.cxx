@@ -1,5 +1,7 @@
 #include <array>
 #include <cstdint>
+#include <qcontainerfwd.h>
+#include <qlist.h>
 #include <string>
 #include <thread>
 #include <QDebug>
@@ -10,7 +12,7 @@
 #include "deps/qcustomplot-source/qcustomplot.h"
 #include <QSerialPortInfo>
 
-static std::array<uint16_t, 100> timeLine;
+static QVector<double> timeLine;
 
 MainWindow::MainWindow( QWidget *parent ) :
     QMainWindow( parent ), ui( new Ui::MainWindow ), timer( new QTimer( this ) )
@@ -22,17 +24,27 @@ MainWindow::MainWindow( QWidget *parent ) :
         ui->comboBox->addItem( l[ i ].portName() );
         ui->comboBox->setItemData( i, l[ i ].description(), Qt::ToolTipRole );
     }
+
+    plotData.resize( 100, 0 );
+    plotData.shrink_to_fit();
+    timeLine.resize( 100 );
+    timeLine.shrink_to_fit();
     for ( size_t i { 0 }; i < 100; ++i )
         timeLine[ i ] = i * 50;
+
     plot = new QCustomPlot( ui->centralwidget );
+    ui->verticalLayout_2->addWidget( plot );
+    QSizePolicy sizePolicy( QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding );
+    plot->setSizePolicy( sizePolicy );
+
     plot->addGraph();
     plot->graph( 0 )->setPen( QPen( Qt::red, 2 ) );
     plot->graph( 0 )->setBrush( QBrush( QColor( 255, 0, 0, 30 ) ) );
 
     plot->xAxis->setLabel( "time (s)" );
     plot->yAxis->setLabel( "ADC value" );
-    plot->xAxis->setRange( 0, 5000 ); // msec
-    plot->yAxis->setRange( 0, 5000 ); // adc amplitude
+    plot->xAxis->setRange( 0, 5000 );  // msec
+    plot->yAxis->setRange( 0, 10000 ); // adc amplitude
 
     plot->xAxis->grid()->setPen( QPen( QColor( 200, 200, 200 ), 0, Qt::DotLine ) );
     plot->yAxis->grid()->setPen( QPen( QColor( 200, 200, 200 ), 0, Qt::DotLine ) );
@@ -48,7 +60,15 @@ void MainWindow::timerCallback()
 
         if ( !_cdc )
         {
-            plot->graph( 0 )->setData( ( timeLine.data() ), plotData.data() );
+            plotData[ plotDataHead ] = 0;
+            plotDataHead             = ( plotDataHead + 1 ) % 100;
+            QVector<double> ordY( 100 );
+            for ( size_t i { 0 }; i < 100; ++i ) // todo -> memcpy x2
+            {
+                ordY[ i ] = plotData[ ( plotDataHead + i ) % 100 ];
+            }
+            plot->graph( 0 )->setData( timeLine, ordY );
+            plot->replot();
             return;
         }
         if ( _cdcNewLevel )
@@ -81,6 +101,17 @@ void MainWindow::timerCallback()
             return;
         }
         uint16_t res { static_cast<uint16_t>( ( data[ 0 ] << 8 ) | data[ 1 ] ) };
+        plotData[ plotDataHead ] = res;
+        plotDataHead             = ( plotDataHead + 1 ) % 100;
+
+        QVector<double> ordY( 100 );
+        for ( size_t i { 0 }; i < 100; ++i ) // todo -> memcpy x2
+        {
+            ordY[ i ] = plotData[ ( plotDataHead + i ) % 100 ];
+        }
+
+        plot->graph( 0 )->setData( timeLine, ordY );
+        plot->replot();
         ui->label->setText( QString::number( res ) );
         bool pOn;
         if ( res >= level )

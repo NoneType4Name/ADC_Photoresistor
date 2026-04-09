@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <array>
 #include <cstdint>
+#include <qlist.h>
 #include "deps/qcustomplot-source/qcustomplot.h"
 
 QT_BEGIN_NAMESPACE
@@ -30,7 +31,7 @@ class MainWindow : public QMainWindow
     uint16_t level { 4000 };
     QTimer *timer;
     QCustomPlot *plot;
-    std::array<uint16_t, 100> plotData;
+    QVector<double> plotData;
     size_t plotDataHead { 0 };
 
   private slots:
