@@ -136,6 +136,7 @@ int main( void )
         else
         {
             trashold = ( RxBufferFS[ 0 ] << 8 ) | RxBufferFS[ 1 ];
+            CDC_Transmit_FS( RxBufferFS, 2 );
         }
         HAL_GPIO_WritePin( GPIOA, GPIO_PIN_7, ( adcData < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
         memset( RxBufferFS, 0, 2 );

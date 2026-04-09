@@ -3,12 +3,12 @@
 #    define CDCUSB_HXX
 #    include <windows.h>
 #    include <cstdint>
+#    include <QString>
 
 class CDCusb
 {
   public:
-    CDCusb( uint64_t comPortNum );
-    void setNewLevel( uint16_t l );
+    CDCusb( QString name );
     uint32_t write( uint8_t *buf, uint32_t len );
     uint32_t read( uint8_t *buf, uint32_t len );
     HANDLE hCom;

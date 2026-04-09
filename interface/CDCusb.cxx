@@ -1,11 +1,12 @@
 #include "CDCusb.hxx"
 #include <cassert>
+#include <cstdlib>
 #include <qlogging.h>
 #include <QDebug>
 
-CDCusb::CDCusb( uint64_t comPortNum )
+CDCusb::CDCusb( QString name )
 {
-    hCom = CreateFileA( "\\\\.\\COM" + comPortNum !!,
+    hCom = CreateFileA( name.toStdString().c_str(),
                         GENERIC_READ | GENERIC_WRITE,
                         0, NULL, OPEN_EXISTING, 0, NULL );
 
@@ -30,18 +31,6 @@ CDCusb::CDCusb( uint64_t comPortNum )
     SetCommState( hCom, &dcb );
 
     assert( SetCommState( hCom, &dcb ) );
-}
-
-void CDCusb::setNewLevel( uint16_t l )
-{
-    uint8_t high   = ( l >> 8 ) & 0xFF;
-    uint8_t low    = l & 0xFF;
-    uint8_t d[ 2 ] = { high, low };
-    if ( !write( d, 2 ) )
-    {
-        qDebug() << "FAILED TO WRITE CDC (ZERO WRITTEN BYTES)\n";
-        return;
-    }
 }
 
 uint32_t CDCusb::write( uint8_t *buf, uint32_t len )

@@ -4,6 +4,9 @@
 #include "CDCusb.hxx"
 #include <QMainWindow>
 #include <QTimer>
+#include <array>
+#include <cstdint>
+#include "deps/qcustomplot-source/qcustomplot.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -20,16 +23,20 @@ class MainWindow : public QMainWindow
     MainWindow( QWidget *parent = nullptr );
     ~MainWindow();
     Ui::MainWindow *ui;
-    CDCusb *_cdc;
+    CDCusb *_cdc { 0 };
 
   private:
-    // bool r { 1 };
-    // std::thread th;
     bool _cdcNewLevel { 0 };
+    uint16_t level { 4000 };
     QTimer *timer;
+    QCustomPlot *plot;
+    std::array<uint16_t, 100> plotData;
+    size_t plotDataHead { 0 };
 
   private slots:
     void timerCallback();
     void on_pushButton_clicked();
+    void on_comboBox_currentTextChanged( const QString &arg1 );
+    void on_lineEdit_editingFinished();
 };
 #endif // MAINWINDOW_HXX
