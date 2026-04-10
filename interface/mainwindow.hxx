@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <qlist.h>
 #include "deps/qcustomplot-source/qcustomplot.h"
+#include "CircularBuffer.hxx"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -31,8 +32,8 @@ class MainWindow : public QMainWindow
     uint16_t level { 4000 };
     QTimer *timer;
     QCustomPlot *plot;
-    QVector<double> plotData;
-    size_t plotDataHead { 0 };
+    CircularBuffer<double> plotData { 100 };
+    QCPItemStraightLine *plotLevelLine { 0 };
 
   private slots:
     void timerCallback();
