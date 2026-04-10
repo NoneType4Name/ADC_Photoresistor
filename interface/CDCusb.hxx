@@ -11,7 +11,7 @@ class CDCusb
     CDCusb( QString name );
     uint32_t write( uint8_t *buf, uint32_t len );
     uint32_t read( uint8_t *buf, uint32_t len );
-    HANDLE hCom;
+    HANDLE hCom { 0 };
     ~CDCusb();
 };
 #endif

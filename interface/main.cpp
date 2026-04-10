@@ -1,8 +1,6 @@
 #include "mainwindow.hxx"
 #include <QApplication>
 
-bool r { 1 };
-
 int main( int argc, char *argv[] )
 {
     QApplication a( argc, argv );

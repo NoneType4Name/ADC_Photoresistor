@@ -156,8 +156,20 @@ QLabel[colorState=&quot;green&quot;] { color: #f00; }</string>
       </item>
       <item>
        <widget class="QLabel" name="label">
+        <property name="font">
+         <font>
+          <pointsize>16</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color: rgb(255, 0, 0)</string>
+        </property>
         <property name="text">
-         <string>TextLabel</string>
+         <string/>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
         </property>
        </widget>
       </item>

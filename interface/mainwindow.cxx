@@ -2,7 +2,9 @@
 #include <cstdint>
 #include <qcontainerfwd.h>
 #include <qlist.h>
+#include <qlogging.h>
 #include <qnamespace.h>
+#include <qserialportinfo.h>
 #include <string>
 #include <thread>
 #include <QDebug>
@@ -19,6 +21,7 @@ MainWindow::MainWindow( QWidget *parent ) :
 {
     ui->setupUi( this );
     auto l { QSerialPortInfo::availablePorts() };
+    l.append( QSerialPortInfo( "DATA" ) );
     for ( size_t i { 0 }; i < l.size(); ++i )
     {
         ui->comboBox->addItem( l[ i ].portName() );
@@ -143,6 +146,13 @@ void MainWindow::on_comboBox_currentTextChanged( const QString &arg1 )
         delete _cdc;
     }
     _cdc = new CDCusb( arg1 );
+    if ( !_cdc->hCom )
+    {
+        delete _cdc;
+        qDebug() << "FAILED TO CREATE CDC CONNECTION\n";
+        ui->label->setText( "FAILED TO CREATE CDC CONNECTION" );
+        ui->comboBox->setCurrentIndex( -1 );
+    }
 }
 
 void MainWindow::on_lineEdit_editingFinished()
