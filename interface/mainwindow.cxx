@@ -21,7 +21,6 @@ MainWindow::MainWindow( QWidget *parent ) :
 {
     ui->setupUi( this );
     auto l { QSerialPortInfo::availablePorts() };
-    l.append( QSerialPortInfo( "DATA" ) );
     for ( size_t i { 0 }; i < l.size(); ++i )
     {
         ui->comboBox->addItem( l[ i ].portName() );
@@ -141,6 +140,7 @@ void MainWindow::on_pushButton_clicked()
 void MainWindow::on_comboBox_currentTextChanged( const QString &arg1 )
 {
     ui->status->clear();
+    ui->label->clear();
     if ( _cdc )
     {
         delete _cdc;
@@ -149,6 +149,7 @@ void MainWindow::on_comboBox_currentTextChanged( const QString &arg1 )
     if ( !_cdc->hCom )
     {
         delete _cdc;
+        _cdc = 0;
         qDebug() << "FAILED TO CREATE CDC CONNECTION\n";
         ui->label->setText( "FAILED TO CREATE CDC CONNECTION" );
         ui->comboBox->setCurrentIndex( -1 );
