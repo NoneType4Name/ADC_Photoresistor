@@ -68,7 +68,9 @@ static void MX_ADC1_Init( void );
 /* USER CODE BEGIN 0 */
 void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
 {
+    __disable_irq();
     memcpy( RxBufferFS, buf, len * sizeof( uint8_t ) );
+    __enable_irq();
     RxBufferFSLen = len;
 }
 
