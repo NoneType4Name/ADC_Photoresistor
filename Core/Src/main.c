@@ -52,6 +52,8 @@ ADC_HandleTypeDef hadc1;
 /* USER CODE BEGIN PV */
 uint32_t RxBufferFSLen = 0;
 uint8_t RxBufferFS[ 2 ];
+uint16_t adcData  = 0;
+uint16_t trashold = 4000;
 
 /* USER CODE END PV */
 
@@ -68,10 +70,25 @@ static void MX_ADC1_Init( void );
 /* USER CODE BEGIN 0 */
 void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
 {
+    if ( !len )
+        return;
     __disable_irq();
     memcpy( RxBufferFS, buf, len * sizeof( uint8_t ) );
     __enable_irq();
     RxBufferFSLen = len;
+    if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
+    {
+        uint8_t high    = ( adcData >> 8 ) & 0xFF;
+        uint8_t low     = adcData & 0xFF;
+        RxBufferFS[ 0 ] = high;
+        RxBufferFS[ 1 ] = low;
+        CDC_Transmit_FS( RxBufferFS, 2 );
+    }
+    else
+    {
+        trashold = ( RxBufferFS[ 0 ] << 8 ) | RxBufferFS[ 1 ];
+        CDC_Transmit_FS( RxBufferFS, 2 );
+    }
 }
 
 /* USER CODE END 0 */
@@ -117,32 +134,13 @@ int main( void )
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
 
-    uint16_t trashold = 4000;
-    uint16_t adcData;
-
     while ( 1 )
     {
-        while ( !RxBufferFSLen );
-
-        if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
-        {
-            HAL_ADC_Start( &hadc1 );
-            HAL_ADC_PollForConversion( &hadc1, 100 );
-            adcData = ( uint16_t ) ( HAL_ADC_GetValue( &hadc1 ) );
-            HAL_ADC_Stop( &hadc1 );
-            uint8_t high   = ( adcData >> 8 ) & 0xFF;
-            uint8_t low    = adcData & 0xFF;
-            uint8_t d[ 2 ] = { high, low };
-            CDC_Transmit_FS( d, 2 );
-        }
-        else
-        {
-            trashold = ( RxBufferFS[ 0 ] << 8 ) | RxBufferFS[ 1 ];
-            CDC_Transmit_FS( RxBufferFS, 2 );
-        }
+        HAL_ADC_Start( &hadc1 );
+        HAL_ADC_PollForConversion( &hadc1, 100 );
+        adcData = ( uint16_t ) ( HAL_ADC_GetValue( &hadc1 ) );
+        HAL_ADC_Stop( &hadc1 );
         HAL_GPIO_WritePin( GPIOA, GPIO_PIN_7, ( adcData < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
-        memset( RxBufferFS, 0, 2 );
-        RxBufferFSLen = 0;
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
