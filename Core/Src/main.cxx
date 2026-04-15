@@ -48,12 +48,13 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
 
 /* USER CODE BEGIN PV */
-uint32_t RxBufferFSLen = 0;
+uint32_t RxBufferFSLen { 0 };
 uint8_t RxBufferFS[ 2 ];
-uint16_t adcData  = 0;
-uint16_t trashold = 4000;
+uint32_t adcData { 0 };
+uint16_t trashold { 4000 };
 
 /* USER CODE END PV */
 
@@ -61,6 +62,7 @@ uint16_t trashold = 4000;
 void SystemClock_Config( void );
 static void MPU_Config( void );
 static void MX_GPIO_Init( void );
+static void MX_DMA_Init( void );
 static void MX_ADC1_Init( void );
 /* USER CODE BEGIN PFP */
 
@@ -78,10 +80,8 @@ void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
     RxBufferFSLen = len;
     if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
     {
-        uint8_t high    = ( adcData >> 8 ) & 0xFF;
-        uint8_t low     = adcData & 0xFF;
-        RxBufferFS[ 0 ] = high;
-        RxBufferFS[ 1 ] = low;
+        RxBufferFS[ 0 ] = ( adcData >> 8 ) & 0xFF;
+        RxBufferFS[ 1 ] = adcData & 0xFF;
         CDC_Transmit_FS( RxBufferFS, 2 );
     }
     else
@@ -124,10 +124,14 @@ int main( void )
 
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
+    MX_DMA_Init();
     MX_ADC1_Init();
     MX_USB_DEVICE_Init();
     /* USER CODE BEGIN 2 */
     HAL_ADCEx_Calibration_Start( &hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED );
+    HAL_ADC_Start_DMA( &hadc1, &adcData, 2 );
+    //  reinterpret_cast<uint32_t *>
+    HAL_ADC_Start( &hadc1 );
 
     /* USER CODE END 2 */
 
@@ -136,11 +140,12 @@ int main( void )
 
     while ( 1 )
     {
-        HAL_ADC_Start( &hadc1 );
-        HAL_ADC_PollForConversion( &hadc1, 100 );
-        adcData = ( uint16_t ) ( HAL_ADC_GetValue( &hadc1 ) );
-        HAL_ADC_Stop( &hadc1 );
-        HAL_GPIO_WritePin( GPIOA, GPIO_PIN_7, ( adcData < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
+        // HAL_ADC_Start( &hadc1 );
+        // HAL_ADC_PollForConversion( &hadc1, 100 );
+        // adcData = static_cast<uint16_t>( HAL_ADC_GetValue( &hadc1 ) );
+        // adcData = ( HAL_ADC_GetValue( &hadc1 ) );
+        // HAL_ADC_Stop( &hadc1 );
+        HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, ( adcData < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
@@ -148,6 +153,17 @@ int main( void )
     /* USER CODE END 3 */
 }
 
+void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc )
+{
+    if ( hadc->Instance == ADC1 )
+    {
+    }
+}
+void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef *hadc )
+{
+    // Conversion Complete & DMA Transfer Complete As Well
+    auto d = adcData;
+}
 /**
  * @brief System Clock Configuration
  * @retval None
@@ -234,7 +250,7 @@ static void MX_ADC1_Init( void )
     hadc1.Init.DiscontinuousConvMode    = DISABLE;
     hadc1.Init.ExternalTrigConv         = ADC_SOFTWARE_START;
     hadc1.Init.ExternalTrigConvEdge     = ADC_EXTERNALTRIGCONVEDGE_NONE;
-    hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DR;
+    hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
     hadc1.Init.Overrun                  = ADC_OVR_DATA_PRESERVED;
     hadc1.Init.LeftBitShift             = ADC_LEFTBITSHIFT_NONE;
     hadc1.Init.OversamplingMode         = DISABLE;
@@ -268,6 +284,20 @@ static void MX_ADC1_Init( void )
     /* USER CODE BEGIN ADC1_Init 2 */
 
     /* USER CODE END ADC1_Init 2 */
+}
+
+/**
+ * Enable DMA controller clock
+ */
+static void MX_DMA_Init( void )
+{
+    /* DMA controller clock enable */
+    __HAL_RCC_DMA1_CLK_ENABLE();
+
+    /* DMA interrupt init */
+    /* DMA1_Stream0_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority( DMA1_Stream0_IRQn, 0, 0 );
+    HAL_NVIC_EnableIRQ( DMA1_Stream0_IRQn );
 }
 
 /**
