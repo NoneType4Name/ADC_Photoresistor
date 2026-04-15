@@ -240,6 +240,11 @@ SECTIONS
     . = ALIGN(8);
   } >DTCMRAM
 
+  	  .RAM_D2 :
+  {
+        KEEP(*(.RAM_D2)) 
+  } >RAM_D2
+
 
 
   /* Remove information from the standard libraries */

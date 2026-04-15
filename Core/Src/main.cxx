@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "stm32h7xx_hal_adc.h"
+#include "stm32h7xx_hal_dma.h"
 #include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -53,8 +55,8 @@ DMA_HandleTypeDef hdma_adc1;
 /* USER CODE BEGIN PV */
 uint32_t RxBufferFSLen { 0 };
 uint8_t RxBufferFS[ 2 ];
-uint32_t adcData { 0 };
 uint16_t trashold { 4000 };
+uint16_t adcData[ 4 ] __attribute__( ( section( ".RAM_D2" ) ) ) __attribute__( ( aligned( 4 ) ) ) { 0, 0, 0, 0 };
 
 /* USER CODE END PV */
 
@@ -80,8 +82,8 @@ void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
     RxBufferFSLen = len;
     if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
     {
-        RxBufferFS[ 0 ] = ( adcData >> 8 ) & 0xFF;
-        RxBufferFS[ 1 ] = adcData & 0xFF;
+        RxBufferFS[ 0 ] = ( adcData[ 0 ] >> 8 ) & 0xFF;
+        RxBufferFS[ 1 ] = adcData[ 0 ] & 0xFF;
         CDC_Transmit_FS( RxBufferFS, 2 );
     }
     else
@@ -91,6 +93,54 @@ void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
     }
 }
 
+void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc )
+{
+    if ( hadc->Instance == ADC1 )
+    {
+        HAL_DMA_StateTypeDef dma_state = HAL_DMA_GetState( &hdma_adc1 );
+
+        // Проверяем регистры DMA
+        uint32_t lisr          = DMA1->LISR;
+        uint32_t hisr          = DMA1->HISR;
+        uint32_t stream_status = DMA1_Stream0->CR;
+        uint32_t fifo_status   = DMA1_Stream0->FCR;
+        uint32_t ndtr          = DMA1_Stream0->NDTR;
+        uint32_t dma_errors    = HAL_DMA_GetError( &hdma_adc1 );
+
+        uint8_t e { 0 };
+        switch ( dma_errors )
+        {
+            case HAL_DMA_ERROR_TE:
+                e = 1;
+                break;
+        }
+        switch ( hadc->ErrorCode )
+        {
+            case HAL_ADC_ERROR_DMA:
+                e = 1;
+                break;
+            case HAL_ADC_ERROR_INTERNAL:
+                e = 2;
+                break;
+            case HAL_ADC_ERROR_JQOVF:
+                e = 3;
+                break;
+            case HAL_ADC_ERROR_OVR:
+                e = 4;
+                break;
+            default:
+                e = hadc->ErrorCode;
+                break;
+        }
+    }
+}
+uint32_t c { 0 };
+void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef *hadc )
+{
+    // Conversion Complete & DMA Transfer Complete As Well
+    auto d  = adcData;
+    auto dd = c;
+}
 /* USER CODE END 0 */
 
 /**
@@ -129,9 +179,9 @@ int main( void )
     MX_USB_DEVICE_Init();
     /* USER CODE BEGIN 2 */
     HAL_ADCEx_Calibration_Start( &hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED );
-    HAL_ADC_Start_DMA( &hadc1, &adcData, 2 );
+    HAL_ADC_Start_DMA( &hadc1, reinterpret_cast<uint32_t *>( &adcData ), 4 );
     //  reinterpret_cast<uint32_t *>
-    HAL_ADC_Start( &hadc1 );
+    // HAL_ADC_Start( &hadc1 );
 
     /* USER CODE END 2 */
 
@@ -140,12 +190,13 @@ int main( void )
 
     while ( 1 )
     {
+        ++c;
         // HAL_ADC_Start( &hadc1 );
         // HAL_ADC_PollForConversion( &hadc1, 100 );
         // adcData = static_cast<uint16_t>( HAL_ADC_GetValue( &hadc1 ) );
         // adcData = ( HAL_ADC_GetValue( &hadc1 ) );
         // HAL_ADC_Stop( &hadc1 );
-        HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, ( adcData < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
+        HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, ( adcData[ 0 ] < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
@@ -153,17 +204,6 @@ int main( void )
     /* USER CODE END 3 */
 }
 
-void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc )
-{
-    if ( hadc->Instance == ADC1 )
-    {
-    }
-}
-void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef *hadc )
-{
-    // Conversion Complete & DMA Transfer Complete As Well
-    auto d = adcData;
-}
 /**
  * @brief System Clock Configuration
  * @retval None
@@ -345,17 +385,37 @@ void MPU_Config( void )
 
     /** Initializes and configures the Region and the memory to be protected
      */
-    MPU_InitStruct.Enable           = MPU_REGION_ENABLE;
-    MPU_InitStruct.Number           = MPU_REGION_NUMBER0;
-    MPU_InitStruct.BaseAddress      = 0x0;
-    MPU_InitStruct.Size             = MPU_REGION_SIZE_4GB;
-    MPU_InitStruct.SubRegionDisable = 0x87;
-    MPU_InitStruct.TypeExtField     = MPU_TEX_LEVEL0;
-    MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
-    MPU_InitStruct.DisableExec      = MPU_INSTRUCTION_ACCESS_DISABLE;
-    MPU_InitStruct.IsShareable      = MPU_ACCESS_SHAREABLE;
-    MPU_InitStruct.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;
-    MPU_InitStruct.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
+    // 下記の設定を有効にする。
+    MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+
+    // D2 DomainのSRAM1領域(0x3000 0000～)から512バイト(バッファサイズ分)を対象とする
+    MPU_InitStruct.BaseAddress = 0x30000000;
+    MPU_InitStruct.Size        = MPU_REGION_SIZE_512B;
+
+    // アクセス制限の必要はないので、Full accessとする
+    MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+
+    // AN4838のP10の記述に従う。
+    // ライトスルーモードにする場合は次の通り
+    MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+    MPU_InitStruct.IsCacheable  = MPU_ACCESS_CACHEABLE;
+    MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+    MPU_InitStruct.IsShareable  = MPU_ACCESS_SHAREABLE;
+
+    // Shared Deviceとして設定する場合は次の通り
+    //	  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+    //	  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+    //	  MPU_InitStruct.IsBufferable = MPU_ACCESS_BUFFERABLE;
+    //	  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
+
+    // リージョンナンバを設定する。(設定を一意に識別する番号)
+    MPU_InitStruct.Number = MPU_REGION_NUMBER0;
+
+    // サブリージョンを有効にする(今回は関係ない)
+    MPU_InitStruct.SubRegionDisable = 0x00;
+
+    // 対象領域からコードを実行できるようにする(今回は関係ない)
+    MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
 
     HAL_MPU_ConfigRegion( &MPU_InitStruct );
     /* Enables the MPU */
