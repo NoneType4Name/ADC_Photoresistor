@@ -18,8 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stm32h7xx_hal_adc.h"
-#include "stm32h7xx_hal_dma.h"
 #include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -52,6 +50,8 @@
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+TIM_HandleTypeDef htim3;
+
 /* USER CODE BEGIN PV */
 uint32_t RxBufferFSLen { 0 };
 uint8_t RxBufferFS[ 2 ];
@@ -66,6 +66,7 @@ static void MPU_Config( void );
 static void MX_GPIO_Init( void );
 static void MX_DMA_Init( void );
 static void MX_ADC1_Init( void );
+static void MX_TIM3_Init( void );
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -134,12 +135,9 @@ void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc )
         }
     }
 }
-uint32_t c { 0 };
+
 void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef *hadc )
 {
-    // Conversion Complete & DMA Transfer Complete As Well
-    auto d  = adcData;
-    auto dd = c;
 }
 /* USER CODE END 0 */
 
@@ -177,11 +175,11 @@ int main( void )
     MX_DMA_Init();
     MX_ADC1_Init();
     MX_USB_DEVICE_Init();
+    MX_TIM3_Init();
     /* USER CODE BEGIN 2 */
     HAL_ADCEx_Calibration_Start( &hadc1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED );
-    HAL_ADC_Start_DMA( &hadc1, reinterpret_cast<uint32_t *>( &adcData ), 4 );
-    //  reinterpret_cast<uint32_t *>
-    // HAL_ADC_Start( &hadc1 );
+    HAL_TIM_Base_Start( &htim3 );
+    HAL_ADC_Start_DMA( &hadc1, reinterpret_cast<uint32_t *>( &adcData ), 1 );
 
     /* USER CODE END 2 */
 
@@ -190,12 +188,6 @@ int main( void )
 
     while ( 1 )
     {
-        ++c;
-        // HAL_ADC_Start( &hadc1 );
-        // HAL_ADC_PollForConversion( &hadc1, 100 );
-        // adcData = static_cast<uint16_t>( HAL_ADC_GetValue( &hadc1 ) );
-        // adcData = ( HAL_ADC_GetValue( &hadc1 ) );
-        // HAL_ADC_Stop( &hadc1 );
         HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, ( adcData[ 0 ] < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
         /* USER CODE END WHILE */
 
@@ -249,7 +241,7 @@ void SystemClock_Config( void )
     RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;
     RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV16;
     RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;
     RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;
 
@@ -285,11 +277,11 @@ static void MX_ADC1_Init( void )
     hadc1.Init.ScanConvMode             = ADC_SCAN_DISABLE;
     hadc1.Init.EOCSelection             = ADC_EOC_SINGLE_CONV;
     hadc1.Init.LowPowerAutoWait         = DISABLE;
-    hadc1.Init.ContinuousConvMode       = ENABLE;
+    hadc1.Init.ContinuousConvMode       = DISABLE;
     hadc1.Init.NbrOfConversion          = 1;
     hadc1.Init.DiscontinuousConvMode    = DISABLE;
-    hadc1.Init.ExternalTrigConv         = ADC_SOFTWARE_START;
-    hadc1.Init.ExternalTrigConvEdge     = ADC_EXTERNALTRIGCONVEDGE_NONE;
+    hadc1.Init.ExternalTrigConv         = ADC_EXTERNALTRIG_T3_TRGO;
+    hadc1.Init.ExternalTrigConvEdge     = ADC_EXTERNALTRIGCONVEDGE_RISING;
     hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
     hadc1.Init.Overrun                  = ADC_OVR_DATA_PRESERVED;
     hadc1.Init.LeftBitShift             = ADC_LEFTBITSHIFT_NONE;
@@ -327,6 +319,49 @@ static void MX_ADC1_Init( void )
 }
 
 /**
+ * @brief TIM3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM3_Init( void )
+{
+    /* USER CODE BEGIN TIM3_Init 0 */
+
+    /* USER CODE END TIM3_Init 0 */
+
+    TIM_ClockConfigTypeDef sClockSourceConfig = { 0 };
+    TIM_MasterConfigTypeDef sMasterConfig     = { 0 };
+
+    /* USER CODE BEGIN TIM3_Init 1 */
+
+    /* USER CODE END TIM3_Init 1 */
+    htim3.Instance               = TIM3;
+    htim3.Init.Prescaler         = 1;
+    htim3.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim3.Init.Period            = 100;
+    htim3.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if ( HAL_TIM_Base_Init( &htim3 ) != HAL_OK )
+    {
+        Error_Handler();
+    }
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+    if ( HAL_TIM_ConfigClockSource( &htim3, &sClockSourceConfig ) != HAL_OK )
+    {
+        Error_Handler();
+    }
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+    sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
+    if ( HAL_TIMEx_MasterConfigSynchronization( &htim3, &sMasterConfig ) != HAL_OK )
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN TIM3_Init 2 */
+
+    /* USER CODE END TIM3_Init 2 */
+}
+
+/**
  * Enable DMA controller clock
  */
 static void MX_DMA_Init( void )
@@ -353,6 +388,7 @@ static void MX_GPIO_Init( void )
     /* USER CODE END MX_GPIO_Init_1 */
 
     /* GPIO Ports Clock Enable */
+    __HAL_RCC_GPIOH_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
 
     /*Configure GPIO pin Output Level */
@@ -385,37 +421,17 @@ void MPU_Config( void )
 
     /** Initializes and configures the Region and the memory to be protected
      */
-    // 下記の設定を有効にする。
-    MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-
-    // D2 DomainのSRAM1領域(0x3000 0000～)から512バイト(バッファサイズ分)を対象とする
-    MPU_InitStruct.BaseAddress = 0x30000000;
-    MPU_InitStruct.Size        = MPU_REGION_SIZE_512B;
-
-    // アクセス制限の必要はないので、Full accessとする
-    MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-
-    // AN4838のP10の記述に従う。
-    // ライトスルーモードにする場合は次の通り
-    MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-    MPU_InitStruct.IsCacheable  = MPU_ACCESS_CACHEABLE;
-    MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-    MPU_InitStruct.IsShareable  = MPU_ACCESS_SHAREABLE;
-
-    // Shared Deviceとして設定する場合は次の通り
-    //	  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-    //	  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-    //	  MPU_InitStruct.IsBufferable = MPU_ACCESS_BUFFERABLE;
-    //	  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-
-    // リージョンナンバを設定する。(設定を一意に識別する番号)
-    MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-
-    // サブリージョンを有効にする(今回は関係ない)
-    MPU_InitStruct.SubRegionDisable = 0x00;
-
-    // 対象領域からコードを実行できるようにする(今回は関係ない)
-    MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+    MPU_InitStruct.Enable           = MPU_REGION_ENABLE;
+    MPU_InitStruct.Number           = MPU_REGION_NUMBER0;
+    MPU_InitStruct.BaseAddress      = 0x0;
+    MPU_InitStruct.Size             = MPU_REGION_SIZE_4GB;
+    MPU_InitStruct.SubRegionDisable = 0x87;
+    MPU_InitStruct.TypeExtField     = MPU_TEX_LEVEL0;
+    MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
+    MPU_InitStruct.DisableExec      = MPU_INSTRUCTION_ACCESS_DISABLE;
+    MPU_InitStruct.IsShareable      = MPU_ACCESS_SHAREABLE;
+    MPU_InitStruct.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;
+    MPU_InitStruct.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
 
     HAL_MPU_ConfigRegion( &MPU_InitStruct );
     /* Enables the MPU */
