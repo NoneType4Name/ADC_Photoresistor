@@ -240,10 +240,10 @@ SECTIONS
     . = ALIGN(8);
   } >DTCMRAM
 
-  	  .RAM_D2 :
+  .RAM :
   {
-        KEEP(*(.RAM_D2)) 
-  } >RAM_D2
+        KEEP(*(.RAM)) 
+  } >RAM
 
 
 

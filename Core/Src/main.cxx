@@ -56,7 +56,7 @@ TIM_HandleTypeDef htim3;
 uint32_t RxBufferFSLen { 0 };
 uint8_t RxBufferFS[ 2 ];
 uint16_t trashold { 4000 };
-uint16_t adcData[ 4 ] __attribute__( ( section( ".RAM_D2" ) ) ) __attribute__( ( aligned( 4 ) ) ) { 0, 0, 0, 0 };
+uint16_t adcData __attribute__( ( section( ".RAM" ) ) ) __attribute__( ( aligned( 4 ) ) ) { 0 };
 
 /* USER CODE END PV */
 
@@ -83,8 +83,8 @@ void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
     RxBufferFSLen = len;
     if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
     {
-        RxBufferFS[ 0 ] = ( adcData[ 0 ] >> 8 ) & 0xFF;
-        RxBufferFS[ 1 ] = adcData[ 0 ] & 0xFF;
+        RxBufferFS[ 0 ] = ( adcData >> 8 ) & 0xFF;
+        RxBufferFS[ 1 ] = adcData & 0xFF;
         CDC_Transmit_FS( RxBufferFS, 2 );
     }
     else
@@ -100,7 +100,6 @@ void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc )
     {
         HAL_DMA_StateTypeDef dma_state = HAL_DMA_GetState( &hdma_adc1 );
 
-        // Проверяем регистры DMA
         uint32_t lisr          = DMA1->LISR;
         uint32_t hisr          = DMA1->HISR;
         uint32_t stream_status = DMA1_Stream0->CR;
@@ -188,7 +187,7 @@ int main( void )
 
     while ( 1 )
     {
-        HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, ( adcData[ 0 ] < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
+        HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, ( adcData < trashold ? GPIO_PIN_RESET : GPIO_PIN_SET ) );
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
@@ -336,9 +335,9 @@ static void MX_TIM3_Init( void )
 
     /* USER CODE END TIM3_Init 1 */
     htim3.Instance               = TIM3;
-    htim3.Init.Prescaler         = 1;
+    htim3.Init.Prescaler         = 7;
     htim3.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim3.Init.Period            = 100;
+    htim3.Init.Period            = 49999;
     htim3.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
     htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
     if ( HAL_TIM_Base_Init( &htim3 ) != HAL_OK )
