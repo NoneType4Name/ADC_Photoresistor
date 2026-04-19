@@ -28,6 +28,7 @@
 #include "stm32h750xx.h"
 #include "stm32h7xx_hal_gpio.h"
 #include "usbd_cdc_if.h"
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -68,76 +69,13 @@ static void MX_DMA_Init( void );
 static void MX_ADC1_Init( void );
 static void MX_TIM3_Init( void );
 /* USER CODE BEGIN PFP */
+void USB_CDC_RxHandler( uint8_t *buf, uint32_t len );
+void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc );
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
-{
-    if ( !len )
-        return;
-    __disable_irq();
-    memcpy( RxBufferFS, buf, len * sizeof( uint8_t ) );
-    __enable_irq();
-    RxBufferFSLen = len;
-    if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
-    {
-        RxBufferFS[ 0 ] = ( adcData >> 8 ) & 0xFF;
-        RxBufferFS[ 1 ] = adcData & 0xFF;
-        CDC_Transmit_FS( RxBufferFS, 2 );
-    }
-    else
-    {
-        trashold = ( RxBufferFS[ 0 ] << 8 ) | RxBufferFS[ 1 ];
-        CDC_Transmit_FS( RxBufferFS, 2 );
-    }
-}
-
-void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc )
-{
-    if ( hadc->Instance == ADC1 )
-    {
-        HAL_DMA_StateTypeDef dma_state = HAL_DMA_GetState( &hdma_adc1 );
-
-        uint32_t lisr          = DMA1->LISR;
-        uint32_t hisr          = DMA1->HISR;
-        uint32_t stream_status = DMA1_Stream0->CR;
-        uint32_t fifo_status   = DMA1_Stream0->FCR;
-        uint32_t ndtr          = DMA1_Stream0->NDTR;
-        uint32_t dma_errors    = HAL_DMA_GetError( &hdma_adc1 );
-
-        uint8_t e { 0 };
-        switch ( dma_errors )
-        {
-            case HAL_DMA_ERROR_TE:
-                e = 1;
-                break;
-        }
-        switch ( hadc->ErrorCode )
-        {
-            case HAL_ADC_ERROR_DMA:
-                e = 1;
-                break;
-            case HAL_ADC_ERROR_INTERNAL:
-                e = 2;
-                break;
-            case HAL_ADC_ERROR_JQOVF:
-                e = 3;
-                break;
-            case HAL_ADC_ERROR_OVR:
-                e = 4;
-                break;
-            default:
-                e = hadc->ErrorCode;
-                break;
-        }
-    }
-}
-
-void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef *hadc )
-{
-}
 /* USER CODE END 0 */
 
 /**
@@ -406,7 +344,77 @@ static void MX_GPIO_Init( void )
 }
 
 /* USER CODE BEGIN 4 */
+int _write( int file, char *ptr, int len )
+{
+    CDC_Transmit_FS( ( uint8_t * ) ptr, len );
+    return len;
+}
 
+void USB_CDC_RxHandler( uint8_t *buf, uint32_t len )
+{
+    if ( !len )
+        return;
+    __disable_irq();
+    memcpy( RxBufferFS, buf, len * sizeof( uint8_t ) );
+    __enable_irq();
+    RxBufferFSLen = len;
+    if ( RxBufferFS[ 0 ] + RxBufferFS[ 1 ] == 0 )
+    {
+        RxBufferFS[ 0 ] = ( adcData >> 8 ) & 0xFF;
+        RxBufferFS[ 1 ] = adcData & 0xFF;
+        CDC_Transmit_FS( RxBufferFS, 2 );
+    }
+    else
+    {
+        trashold = ( RxBufferFS[ 0 ] << 8 ) | RxBufferFS[ 1 ];
+        CDC_Transmit_FS( RxBufferFS, 2 );
+    }
+}
+
+void HAL_ADC_ErrorCallback( ADC_HandleTypeDef *hadc )
+{
+    if ( hadc->Instance == ADC1 )
+    {
+        HAL_DMA_StateTypeDef dma_state = HAL_DMA_GetState( &hdma_adc1 );
+
+        uint32_t lisr          = DMA1->LISR;
+        uint32_t hisr          = DMA1->HISR;
+        uint32_t stream_status = DMA1_Stream0->CR;
+        uint32_t fifo_status   = DMA1_Stream0->FCR;
+        uint32_t ndtr          = DMA1_Stream0->NDTR;
+        uint32_t dma_errors    = HAL_DMA_GetError( &hdma_adc1 );
+
+        uint8_t e { 0 };
+        switch ( dma_errors )
+        {
+            case HAL_DMA_ERROR_TE:
+                e = 1;
+                break;
+        }
+        switch ( hadc->ErrorCode )
+        {
+            case HAL_ADC_ERROR_DMA:
+                e = 1;
+                break;
+            case HAL_ADC_ERROR_INTERNAL:
+                e = 2;
+                break;
+            case HAL_ADC_ERROR_JQOVF:
+                e = 3;
+                break;
+            case HAL_ADC_ERROR_OVR:
+                e = 4;
+                break;
+            default:
+                e = hadc->ErrorCode;
+                break;
+        }
+    }
+}
+
+void HAL_ADC_ConvCpltCallback( ADC_HandleTypeDef *hadc )
+{
+}
 /* USER CODE END 4 */
 
 /* MPU Configuration */
@@ -463,8 +471,8 @@ void assert_failed( uint8_t *file, uint32_t line )
 {
     /* USER CODE BEGIN 6 */
     /* User can add his own implementation to report the file name and line
-       number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
-       line) */
+    number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+    line) */
     /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
